@@ -1,66 +1,88 @@
-## Foundry
+# Invariant Testing Concepts in Solidity (Foundry)
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Learning and exploration of **invariant testing** techniques inspired by [horsefacts/weth-invariant-testing](https://github.com/horsefacts/weth-invariant-testing).
 
-Foundry consists of:
+---
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## 📋 Table of Contents
+- [Key Concepts Learned](#key-concepts-learned)
+  - [1. Base Invariants](#1-base-invariants)
+  - [2. Open vs Constrained Invariants](#2-open-vs-constrained-invariants)
+  - [3. Bounded vs Unbounded Invariants](#3-bounded-vs-unbounded-invariants)
+  - [4. Handler Contracts](#4-handler-contracts)
+  - [5. Selectors](#5-selectors)
+  - [6. Actors](#6-actors)
+- [Summary of Testing Techniques](#summary-of-testing-techniques)
+- [Resources](#resources)
 
-## Documentation
+---
 
-https://book.getfoundry.sh/
+## Key Concepts Learned
 
-## Usage
+### 1. Base Invariants
+✅ **Invariant tests** focus on system-wide properties that must always hold true, not just the result of a single function.
 
-### Build
+> Example: *"The total ETH in the Handler + WETH contract must always equal the initial ETH supply."*
 
-```shell
-$ forge build
-```
+---
 
-### Test
+### 2. Open vs Constrained Invariants
+✅ **Open Invariants**: Allow the fuzzer to call any function with random inputs, simulating chaos.  
+✅ **Constrained Invariants**: Structure the fuzzer by bounding inputs and scenarios for more realistic behaviors.
 
-```shell
-$ forge test
-```
+---
 
-### Format
+### 3. Bounded vs Unbounded Invariants
+✅ **Bounded Invariants**: Use `bound()` to restrict fuzz inputs (e.g., deposits must not exceed balance).  
+✅ **Unbounded Invariants**: Full randomization, higher exploration but with lots of noise (reverts).
 
-```shell
-$ forge fmt
-```
+---
 
-### Gas Snapshots
+### 4. Handler Contracts
+✅ **Handlers** act as middlemen contracts that:
+- Wrap the functions of the original contract under test.
+- Allow cheatcodes like `vm.prank`, `deal`, etc.
+- Simulate realistic environment setups.
+- Introduce controlled randomness for testing.
 
-```shell
-$ forge snapshot
-```
+---
 
-### Anvil
+### 5. Selectors
+✅ **Selectors** allow you to choose specific contract functions for fuzzing instead of exposing the entire contract surface.
 
-```shell
-$ anvil
-```
+> Use `targetSelector` with precise function selectors to improve fuzz test focus and efficiency.
 
-### Deploy
+---
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+### 6. Actors
+✅ **Actors** simulate different users interacting with the system (multi-address fuzzing):
+- Tracked via a custom `AddressSet`.
+- Functions like deposit, withdraw, transfer are fuzzed across many users.
+- Introduces realism compared to all calls coming from just the Handler address.
 
-### Cast
+---
 
-```shell
-$ cast <subcommand>
-```
+## 📜 Summary of Testing Techniques
 
-### Help
+| Concept              | Purpose                                                         |
+|----------------------|------------------------------------------------------------------|
+| Invariant properties | Ensure critical system properties always hold.                  |
+| Handlers             | Control interactions and environment for realistic fuzzing.     |
+| Selectors            | Limit fuzzing to critical contract methods.                     |
+| Actors               | Simulate a true multi-user environment.                         |
+| Ghost Variables      | Track off-chain events like total deposits, withdrawals, etc.    |
+| ForcePush            | Simulate `selfdestruct` scenarios that forcibly push ETH to contracts.|
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+---
+
+## 📚 Resources
+
+- Tutorial: [Invariant Testing Walkthrough (horsefacts)](https://github.com/horsefacts/weth-invariant-testing)
+- Foundry Tools: [Foundry Book](https://book.getfoundry.sh/), Forge, Forge-std
+
+---
+
+> **Tip:**  
+> Consider adding a `/test/handlers/` folder for handlers, using structured test file naming like `ContractName.invariants.t.sol` and applying `targetSelector` cleanly in `setUp()`.
+
+---
